@@ -2,13 +2,19 @@ from config import mysql
 import pymysql
 
 
-def execute_query(sqlQuery):
+def execute_query(sqlQuery,type_cursor=False, with_rows=False, single_row=False):
     conn = cursor = False
     try:
         conn = mysql.connect()
-        cursor = conn.cursor()
+        if type_cursor:
+            cursor = conn.cursor(type_cursor)
+        else:
+            cursor = conn.cursor()
         cursor.execute(sqlQuery)
         conn.commit()
+        if with_rows:
+            rows = single_row and cursor.fetchone() or cursor.fetchall()
+            return rows
         return False
     except Exception as e:
         return str(e)
@@ -37,20 +43,7 @@ def delete_db(table_name, id):
 
 
 def get_db(table_name, columns, id, join='', where=''):
-    conn = cursor = False
-    try:
-        conn = mysql.connect()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        query = "SELECT %s FROM %s %s %s" % (columns, table_name, join, where)
-        if id:
-            query += " WHERE id = %s" % id
-        cursor.execute(query)
-        rows = id and cursor.fetchone() or cursor.fetchall()
-        return rows
-    except Exception as e:
-        return str(e)
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+    query = "SELECT %s FROM %s %s %s" % (columns, table_name, join, where)
+    if id:
+        query += " WHERE id = %s" % id
+    return execute_query(query, pymysql.cursors.DictCursor,True, id)
